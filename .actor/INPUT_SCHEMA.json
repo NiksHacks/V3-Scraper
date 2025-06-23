@@ -34,9 +34,6 @@
       "title": "Allowed domains",
       "type": "array",
       "description": "List of domains to restrict crawling to. Leave empty to allow all domains from start URLs.",
-      "items": {
-        "type": "string"
-      },
       "editor": "stringList"
     },
     "proxyConfiguration": {
