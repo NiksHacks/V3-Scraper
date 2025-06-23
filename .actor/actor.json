@@ -1,25 +1,34 @@
 {
     "actorSpecification": 1,
-    "name": "nhk-hack FACEBOOK SCRAPER ADS",
-    "title": "NHK Hack",
-    "description": "A powerful and generic web scraper.",
+    "name": "meta-ads-scraper",
+    "title": "Meta Ads Library Scraper",
+    "description": "Scraper specializzato per estrarre annunci pubblicitari dalla Meta Ads Library di Facebook.",
     "version": "0.0.1",
     "storages": {
         "dataset": {
             "actorSpecification": 1,
-            "title": "NHK Hack Scraper Results",
+            "title": "Meta Ads Scraper Results",
             "views": {
                 "default": {
                     "title": "Default View",
                     "transformation": {
                         "fields": [
-                            "url",
-                            "title",
-                            "text",
-                            "html",
-                            "links",
-                            "images",
-                            "metadata"
+                            "ad_id",
+                            "page_name",
+                            "ad_creative_body",
+                            "ad_creative_link_caption",
+                            "ad_creative_link_description",
+                            "ad_creative_link_title",
+                            "ad_delivery_start_time",
+                            "ad_delivery_stop_time",
+                            "ad_snapshot_url",
+                            "currency",
+                            "demographic_distribution",
+                            "funding_entity",
+                            "impressions",
+                            "spend",
+                            "page_id",
+                            "publisher_platforms"
                         ]
                     },
                     "display": {

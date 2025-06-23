@@ -1,27 +1,30 @@
 import asyncio
 import json
-import re
-from urllib.parse import urljoin, urlparse
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 from apify import Actor
 import httpx
-from bs4 import BeautifulSoup
-from parsel import Selector
-import w3lib.html
-import w3lib.url
+from facebook_business.api import FacebookAdsApi
+from facebook_business.adobjects.adslibrary import AdsLibrary
+from facebook_business.exceptions import FacebookRequestError
 
-class NHKHackScraper:
-    def __init__(self):
+class MetaAdsLibraryScraper:
+    def __init__(self, access_token: str):
+        self.access_token = access_token
+        self.api = None
         self.client = None
-        self.visited_urls = set()
         
     async def __aenter__(self):
+        # Initialize Facebook API
+        FacebookAdsApi.init(access_token=self.access_token)
+        self.api = FacebookAdsApi.get_default_api()
+        
+        # Initialize HTTP client for direct API calls
         self.client = httpx.AsyncClient(
             timeout=30.0,
-            follow_redirects=True,
             headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Meta Ads Library Scraper/1.0'
             }
         )
         return self
@@ -30,207 +33,211 @@ class NHKHackScraper:
         if self.client:
             await self.client.aclose()
 
-    async def fetch_page(self, url: str) -> Optional[Dict[str, Any]]:
-        """Fetch a single page and extract data"""
-        try:
-            Actor.log.info(f"Fetching: {url}")
-            response = await self.client.get(url)
-            response.raise_for_status()
-            
-            content_type = response.headers.get('content-type', '').lower()
-            if 'text/html' not in content_type:
-                Actor.log.warning(f"Skipping non-HTML content: {url}")
-                return None
-                
-            html = response.text
-            soup = BeautifulSoup(html, 'lxml')
-            selector = Selector(text=html)
-            
-            # Extract basic page data
-            page_data = {
-                'url': url,
-                'title': self.extract_title(soup),
-                'text': self.extract_text(soup),
-                'html': html,
-                'links': self.extract_links(soup, url),
-                'images': self.extract_images(soup, url),
-                'metadata': self.extract_metadata(soup, selector)
-            }
-            
-            return page_data
-            
-        except httpx.HTTPStatusError as e:
-            Actor.log.error(f"HTTP error for {url}: {e.response.status_code}")
-            return None
-        except Exception as e:
-            Actor.log.error(f"Error fetching {url}: {str(e)}")
-            return None
-
-    def extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract page title"""
-        title_tag = soup.find('title')
-        if title_tag:
-            return title_tag.get_text().strip()
+    async def search_ads(self, 
+                        search_terms: Optional[str] = None,
+                        ad_reached_countries: List[str] = ['IT'],
+                        ad_active_status: str = 'ALL',
+                        ad_type: str = 'ALL',
+                        limit: int = 100,
+                        max_pages: int = 10,
+                        fields: List[str] = None) -> List[Dict[str, Any]]:
+        """
+        Search ads in Meta Ads Library using the Graph API
+        """
+        if fields is None:
+            fields = [
+                'id',
+                'ad_creation_time',
+                'ad_creative_bodies',
+                'ad_creative_link_captions', 
+                'ad_creative_link_descriptions',
+                'ad_creative_link_titles',
+                'ad_delivery_start_time',
+                'ad_delivery_stop_time',
+                'ad_snapshot_url',
+                'currency',
+                'demographic_distribution',
+                'funding_entity',
+                'impressions',
+                'page_id',
+                'page_name',
+                'publisher_platforms',
+                'spend'
+            ]
         
-        h1_tag = soup.find('h1')
-        if h1_tag:
-            return h1_tag.get_text().strip()
-            
-        return ''
-
-    def extract_text(self, soup: BeautifulSoup) -> str:
-        """Extract clean text content"""
-        # Remove script and style elements
-        for script in soup(["script", "style"]):
-            script.decompose()
-            
-        text = soup.get_text()
-        # Clean up whitespace
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = ' '.join(chunk for chunk in chunks if chunk)
+        all_ads = []
+        page_count = 0
+        next_page_token = None
         
-        return text
-
-    def extract_links(self, soup: BeautifulSoup, base_url: str) -> List[Dict[str, str]]:
-        """Extract all links from the page"""
-        links = []
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            absolute_url = urljoin(base_url, href)
-            
-            links.append({
-                'url': absolute_url,
-                'text': link.get_text().strip(),
-                'title': link.get('title', '')
-            })
-            
-        return links
-
-    def extract_images(self, soup: BeautifulSoup, base_url: str) -> List[Dict[str, str]]:
-        """Extract all images from the page"""
-        images = []
-        for img in soup.find_all('img', src=True):
-            src = img['src']
-            absolute_url = urljoin(base_url, src)
-            
-            images.append({
-                'url': absolute_url,
-                'alt': img.get('alt', ''),
-                'title': img.get('title', '')
-            })
-            
-        return images
-
-    def extract_metadata(self, soup: BeautifulSoup, selector: Selector) -> Dict[str, Any]:
-        """Extract metadata from the page"""
-        metadata = {}
-        
-        # Meta tags
-        for meta in soup.find_all('meta'):
-            name = meta.get('name') or meta.get('property') or meta.get('http-equiv')
-            content = meta.get('content')
-            if name and content:
-                metadata[name] = content
-                
-        # JSON-LD structured data
-        json_ld_scripts = soup.find_all('script', type='application/ld+json')
-        structured_data = []
-        for script in json_ld_scripts:
+        while page_count < max_pages:
             try:
-                data = json.loads(script.string)
-                structured_data.append(data)
-            except (json.JSONDecodeError, TypeError):
-                continue
+                Actor.log.info(f"Fetching page {page_count + 1} of ads...")
                 
-        if structured_data:
-            metadata['structured_data'] = structured_data
-            
-        return metadata
-
-    def should_follow_link(self, url: str, allowed_domains: List[str], max_depth: int, current_depth: int) -> bool:
-        """Determine if a link should be followed"""
-        if current_depth >= max_depth:
-            return False
-            
-        if url in self.visited_urls:
-            return False
-            
-        parsed_url = urlparse(url)
-        domain = parsed_url.netloc.lower()
+                # Build API URL
+                base_url = "https://graph.facebook.com/v18.0/ads_archive"
+                params = {
+                    'access_token': self.access_token,
+                    'fields': ','.join(fields),
+                    'ad_reached_countries': json.dumps(ad_reached_countries),
+                    'ad_active_status': ad_active_status,
+                    'ad_type': ad_type,
+                    'limit': limit
+                }
+                
+                if search_terms:
+                    params['search_terms'] = search_terms
+                    
+                if next_page_token:
+                    params['after'] = next_page_token
+                
+                # Make API request
+                response = await self.client.get(base_url, params=params)
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                if 'data' not in data:
+                    Actor.log.warning("No data field in response")
+                    break
+                    
+                ads_batch = data['data']
+                if not ads_batch:
+                    Actor.log.info("No more ads found")
+                    break
+                    
+                # Process and clean ads data
+                processed_ads = []
+                for ad in ads_batch:
+                    processed_ad = self.process_ad_data(ad)
+                    processed_ads.append(processed_ad)
+                    
+                all_ads.extend(processed_ads)
+                Actor.log.info(f"Processed {len(processed_ads)} ads from page {page_count + 1}")
+                
+                # Check for next page
+                if 'paging' in data and 'next' in data['paging']:
+                    # Extract after token from next URL
+                    next_url = data['paging']['next']
+                    if 'after=' in next_url:
+                        next_page_token = next_url.split('after=')[1].split('&')[0]
+                    else:
+                        break
+                else:
+                    Actor.log.info("No more pages available")
+                    break
+                    
+                page_count += 1
+                
+                # Small delay to respect rate limits
+                await asyncio.sleep(1)
+                
+            except httpx.HTTPStatusError as e:
+                Actor.log.error(f"HTTP error: {e.response.status_code} - {e.response.text}")
+                if e.response.status_code == 429:  # Rate limit
+                    Actor.log.info("Rate limit hit, waiting 60 seconds...")
+                    await asyncio.sleep(60)
+                    continue
+                else:
+                    break
+            except Exception as e:
+                Actor.log.error(f"Error fetching ads: {str(e)}")
+                break
+                
+        Actor.log.info(f"Total ads collected: {len(all_ads)}")
+        return all_ads
+    
+    def process_ad_data(self, ad: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process and clean individual ad data
+        """
+        processed = {
+            'ad_id': ad.get('id'),
+            'page_name': ad.get('page_name'),
+            'page_id': ad.get('page_id'),
+            'ad_creation_time': ad.get('ad_creation_time'),
+            'ad_delivery_start_time': ad.get('ad_delivery_start_time'),
+            'ad_delivery_stop_time': ad.get('ad_delivery_stop_time'),
+            'ad_snapshot_url': ad.get('ad_snapshot_url'),
+            'currency': ad.get('currency'),
+            'funding_entity': ad.get('funding_entity'),
+            'impressions': ad.get('impressions', {}),
+            'spend': ad.get('spend', {}),
+            'demographic_distribution': ad.get('demographic_distribution', []),
+            'publisher_platforms': ad.get('publisher_platforms', []),
+            'scraped_at': datetime.now().isoformat()
+        }
         
-        if allowed_domains:
-            return any(allowed_domain in domain for allowed_domain in allowed_domains)
+        # Process creative content
+        if 'ad_creative_bodies' in ad and ad['ad_creative_bodies']:
+            processed['ad_creative_body'] = ad['ad_creative_bodies'][0] if ad['ad_creative_bodies'] else ''
+        else:
+            processed['ad_creative_body'] = ''
             
-        return True
-
-    async def crawl_website(self, start_urls: List[str], max_pages: int = 10, max_depth: int = 1, allowed_domains: List[str] = None) -> List[Dict[str, Any]]:
-        """Crawl multiple pages starting from given URLs"""
-        results = []
-        urls_to_visit = [(url, 0) for url in start_urls]  # (url, depth)
+        if 'ad_creative_link_captions' in ad and ad['ad_creative_link_captions']:
+            processed['ad_creative_link_caption'] = ad['ad_creative_link_captions'][0] if ad['ad_creative_link_captions'] else ''
+        else:
+            processed['ad_creative_link_caption'] = ''
+            
+        if 'ad_creative_link_descriptions' in ad and ad['ad_creative_link_descriptions']:
+            processed['ad_creative_link_description'] = ad['ad_creative_link_descriptions'][0] if ad['ad_creative_link_descriptions'] else ''
+        else:
+            processed['ad_creative_link_description'] = ''
+            
+        if 'ad_creative_link_titles' in ad and ad['ad_creative_link_titles']:
+            processed['ad_creative_link_title'] = ad['ad_creative_link_titles'][0] if ad['ad_creative_link_titles'] else ''
+        else:
+            processed['ad_creative_link_title'] = ''
         
-        while urls_to_visit and len(results) < max_pages:
-            current_url, current_depth = urls_to_visit.pop(0)
-            
-            if current_url in self.visited_urls:
-                continue
-                
-            self.visited_urls.add(current_url)
-            page_data = await self.fetch_page(current_url)
-            
-            if page_data:
-                results.append(page_data)
-                
-                # Add links for further crawling if within depth limit
-                if current_depth < max_depth:
-                    for link in page_data.get('links', []):
-                        link_url = link['url']
-                        if self.should_follow_link(link_url, allowed_domains, max_depth, current_depth + 1):
-                            urls_to_visit.append((link_url, current_depth + 1))
-                            
-        return results
+        return processed
 
 async def main():
     async with Actor:
         actor_input = await Actor.get_input() or {}
         
-        # Input parameters
-        start_urls = actor_input.get('startUrls', [])
-        if isinstance(start_urls, str):
-            start_urls = [start_urls]
-            
-        max_pages = actor_input.get('maxPages', 10)
-        max_depth = actor_input.get('maxDepth', 1)
-        allowed_domains = actor_input.get('allowedDomains', [])
-        
-        # Validate input
-        if not start_urls:
-            Actor.log.error("No start URLs provided. Please specify 'startUrls' in the input.")
+        # Validate required input
+        access_token = actor_input.get('accessToken')
+        if not access_token:
+            Actor.log.error("Access token is required. Please provide 'accessToken' in the input.")
             return
             
-        Actor.log.info(f"Starting NHK Hack scraper with {len(start_urls)} URLs")
-        Actor.log.info(f"Max pages: {max_pages}, Max depth: {max_depth}")
+        # Input parameters
+        search_terms = actor_input.get('searchTerms')
+        ad_reached_countries = actor_input.get('adReachedCountries', ['IT'])
+        ad_active_status = actor_input.get('adActiveStatus', 'ALL')
+        ad_type = actor_input.get('adType', 'ALL')
+        limit = actor_input.get('limit', 100)
+        max_pages = actor_input.get('maxPages', 10)
+        fields = actor_input.get('fields')
         
-        async with NHKHackScraper() as scraper:
-            if max_depth > 1:
-                # Crawling mode
-                Actor.log.info("Running in crawling mode")
-                results = await scraper.crawl_website(start_urls, max_pages, max_depth, allowed_domains)
-            else:
-                # Single page scraping mode
-                Actor.log.info("Running in single page scraping mode")
-                results = []
-                for url in start_urls[:max_pages]:
-                    page_data = await scraper.fetch_page(url)
-                    if page_data:
-                        results.append(page_data)
-                        
-            # Save results
-            if results:
-                await Actor.push_data(results)
-                Actor.log.info(f"Successfully scraped {len(results)} pages")
-            else:
-                Actor.log.warning("No data was scraped")
+        Actor.log.info(f"Starting Meta Ads Library scraper")
+        Actor.log.info(f"Search terms: {search_terms or 'None'}")
+        Actor.log.info(f"Countries: {ad_reached_countries}")
+        Actor.log.info(f"Ad status: {ad_active_status}")
+        Actor.log.info(f"Ad type: {ad_type}")
+        Actor.log.info(f"Limit per page: {limit}")
+        Actor.log.info(f"Max pages: {max_pages}")
+        
+        try:
+            async with MetaAdsLibraryScraper(access_token) as scraper:
+                ads = await scraper.search_ads(
+                    search_terms=search_terms,
+                    ad_reached_countries=ad_reached_countries,
+                    ad_active_status=ad_active_status,
+                    ad_type=ad_type,
+                    limit=limit,
+                    max_pages=max_pages,
+                    fields=fields
+                )
+                
+                if ads:
+                    await Actor.push_data(ads)
+                    Actor.log.info(f"Successfully scraped {len(ads)} ads")
+                else:
+                    Actor.log.warning("No ads were found with the given criteria")
+                    
+        except Exception as e:
+            Actor.log.error(f"Error during scraping: {str(e)}")
+            raise
 
 if __name__ == "__main__":
     asyncio.run(main())

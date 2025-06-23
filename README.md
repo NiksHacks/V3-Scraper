@@ -1,168 +1,92 @@
-# NHK Hack - Universal Web Scraper
+# Meta Ads Library Scraper
 
-A powerful and flexible web scraper built on the Apify platform. NHK Hack can scrape single pages or crawl entire websites, extracting comprehensive data including text content, links, images, and metadata.
+Questo actor permette di estrarre annunci pubblicitari dalla Meta Ads Library utilizzando l'API ufficiale di Facebook.
 
-## Features
+## Caratteristiche
 
-- **Single Page Scraping**: Extract data from individual web pages
-- **Website Crawling**: Follow links and scrape multiple pages with configurable depth
-- **Comprehensive Data Extraction**:
-  - Page title and clean text content
-  - All links with anchor text
-  - All images with alt text
-  - Meta tags and structured data (JSON-LD)
-  - Full HTML content (optional)
-- **Smart Link Following**: Configurable domain restrictions and crawl depth
-- **Robust Error Handling**: Handles HTTP errors, timeouts, and malformed content
-- **Async Processing**: High-performance asynchronous scraping
+- Estrazione di annunci pubblicitari da Facebook/Instagram
+- Ricerca per termini specifici
+- Filtri per paese, stato dell'annuncio e tipo
+- Estrazione di dati dettagliati inclusi spesa, impressioni e contenuti creativi
+- Gestione automatica della paginazione
+- Rispetto dei rate limits dell'API
 
-## Input Configuration
+## Input
 
-### Required Parameters
+### Parametri Richiesti
 
-- **Start URLs** (`startUrls`): Array of URLs to begin scraping from
+- **accessToken** (string): Token di accesso per l'API di Facebook. Richiesto per autenticare le richieste.
 
-### Optional Parameters
+### Parametri Opzionali
 
-- **Max Pages** (`maxPages`): Maximum number of pages to scrape (default: 10)
-- **Max Depth** (`maxDepth`): Maximum crawling depth (default: 1 for single page)
-- **Allowed Domains** (`allowedDomains`): Restrict crawling to specific domains
-- **Include Images** (`includeImages`): Extract image URLs (default: true)
-- **Include Links** (`includeLinks`): Extract page links (default: true)
-- **Include Metadata** (`includeMetadata`): Extract meta tags and structured data (default: true)
-- **Include HTML** (`includeHtml`): Include full HTML content (default: false)
+- **searchTerms** (string): Termini di ricerca per filtrare gli annunci
+- **adReachedCountries** (array): Lista dei codici paese (default: ['IT'])
+- **adActiveStatus** (string): Stato degli annunci - 'ALL', 'ACTIVE', 'INACTIVE' (default: 'ALL')
+- **adType** (string): Tipo di annuncio - 'ALL', 'POLITICAL_AND_ISSUE_ADS', 'HOUSING_ADS', 'EMPLOYMENT_ADS', 'CREDIT_ADS' (default: 'ALL')
+- **limit** (number): Numero di annunci per pagina (default: 100, max: 1000)
+- **maxPages** (number): Numero massimo di pagine da processare (default: 10)
+- **fields** (array): Campi specifici da estrarre (opzionale, usa i default se non specificato)
+- **proxyConfiguration** (object): Configurazione proxy per le richieste
 
-## Usage Examples
+## Output
 
-### Single Page Scraping
+Ogni annuncio estratto contiene:
 
-```json
-{
-  "startUrls": [
-    {"url": "https://example.com"}
-  ],
-  "maxPages": 1,
-  "maxDepth": 1
-}
-```
+- **ad_id**: ID univoco dell'annuncio
+- **page_name**: Nome della pagina che ha pubblicato l'annuncio
+- **page_id**: ID della pagina
+- **ad_creation_time**: Data di creazione dell'annuncio
+- **ad_delivery_start_time**: Data di inizio pubblicazione
+- **ad_delivery_stop_time**: Data di fine pubblicazione
+- **ad_snapshot_url**: URL dello screenshot dell'annuncio
+- **currency**: Valuta utilizzata per la spesa
+- **funding_entity**: Entità che finanzia l'annuncio
+- **impressions**: Dati sulle impressioni
+- **spend**: Dati sulla spesa pubblicitaria
+- **demographic_distribution**: Distribuzione demografica
+- **publisher_platforms**: Piattaforme di pubblicazione
+- **ad_creative_body**: Testo principale dell'annuncio
+- **ad_creative_link_caption**: Didascalia del link
+- **ad_creative_link_description**: Descrizione del link
+- **ad_creative_link_title**: Titolo del link
+- **scraped_at**: Timestamp dell'estrazione
 
-### Website Crawling
+## Come Ottenere un Access Token
 
-```json
-{
-  "startUrls": [
-    {"url": "https://example.com"}
-  ],
-  "maxPages": 50,
-  "maxDepth": 3,
-  "allowedDomains": ["example.com"]
-}
-```
+1. Vai su [Facebook Developers](https://developers.facebook.com/)
+2. Crea una nuova app o usa una esistente
+3. Aggiungi il prodotto "Marketing API"
+4. Genera un token di accesso con i permessi necessari:
+   - `ads_read`
+   - `pages_read_engagement`
 
-### News Site Scraping
-
-```json
-{
-  "startUrls": [
-    {"url": "https://news-site.com/articles"}
-  ],
-  "maxPages": 100,
-  "maxDepth": 2,
-  "allowedDomains": ["news-site.com"],
-  "includeHtml": false,
-  "includeImages": true
-}
-```
-
-## Output Format
-
-Each scraped page returns a structured object:
+## Esempio di Input
 
 ```json
 {
-  "url": "https://example.com/page",
-  "title": "Page Title",
-  "text": "Clean text content of the page...",
-  "html": "<html>...</html>",
-  "links": [
-    {
-      "url": "https://example.com/link",
-      "text": "Link text",
-      "title": "Link title"
-    }
-  ],
-  "images": [
-    {
-      "url": "https://example.com/image.jpg",
-      "alt": "Image description",
-      "title": "Image title"
-    }
-  ],
-  "metadata": {
-    "description": "Page meta description",
-    "keywords": "page, keywords",
-    "structured_data": [...]
-  }
+  "accessToken": "YOUR_FACEBOOK_ACCESS_TOKEN",
+  "searchTerms": "pizza",
+  "adReachedCountries": ["IT", "US"],
+  "adActiveStatus": "ACTIVE",
+  "adType": "ALL",
+  "limit": 50,
+  "maxPages": 5
 }
 ```
 
-## Technical Details
+## Note Importanti
 
-### Dependencies
+- L'access token deve avere i permessi appropriati per accedere alla Meta Ads Library
+- L'API ha rate limits che vengono gestiti automaticamente dall'actor
+- I dati disponibili dipendono dalle politiche di trasparenza di Meta
+- Alcuni campi potrebbero non essere disponibili per tutti gli annunci
 
-- **apify**: Apify SDK for actor development
-- **httpx**: Async HTTP client for web requests
-- **beautifulsoup4**: HTML parsing and data extraction
-- **lxml**: Fast XML and HTML parser
-- **parsel**: Advanced CSS and XPath selectors
-- **w3lib**: Web scraping utilities
+## Limitazioni
 
-### Architecture
+- L'API di Meta ha limitazioni sui dati storici disponibili
+- Alcuni annunci potrebbero non essere accessibili a causa delle impostazioni di privacy
+- I rate limits dell'API possono influenzare la velocità di estrazione
 
-The scraper is built using modern Python async/await patterns for high performance:
+## Supporto
 
-- **NHKHackScraper Class**: Main scraper logic with async context management
-- **Modular Extraction**: Separate methods for different data types
-- **Smart Crawling**: Intelligent link following with depth and domain controls
-- **Error Recovery**: Robust error handling for production use
-
-### Performance
-
-- Async HTTP requests for concurrent processing
-- Memory-efficient streaming for large sites
-- Configurable limits to prevent resource exhaustion
-- Smart duplicate URL detection
-
-## Use Cases
-
-- **Content Research**: Extract articles, blog posts, and documentation
-- **Competitive Analysis**: Monitor competitor websites and content
-- **Data Mining**: Collect structured data from web sources
-- **SEO Analysis**: Extract meta tags, structured data, and page content
-- **Link Building**: Discover and analyze link opportunities
-- **Market Research**: Gather product information and pricing data
-
-## Best Practices
-
-1. **Start Small**: Begin with low `maxPages` and `maxDepth` values
-2. **Use Domain Restrictions**: Set `allowedDomains` to avoid crawling the entire web
-3. **Monitor Resources**: Large crawls can consume significant compute time
-4. **Respect Robots.txt**: Be mindful of website scraping policies
-5. **Rate Limiting**: The scraper includes built-in delays to be respectful
-
-## Error Handling
-
-The scraper handles various error conditions gracefully:
-
-- HTTP errors (404, 500, etc.)
-- Network timeouts and connection issues
-- Malformed HTML and encoding problems
-- JavaScript-heavy sites (extracts available static content)
-
-## Support
-
-For issues, feature requests, or questions about NHK Hack, please refer to the Apify platform documentation or contact the actor maintainer.
-
----
-
-**NHK Hack** - Powerful web scraping made simple.
+Per problemi o domande, consulta la [documentazione ufficiale dell'API Meta Ads Library](https://developers.facebook.com/docs/marketing-api/reference/ads-archive/).

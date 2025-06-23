@@ -1,87 +1,94 @@
 {
-  "title": "NHK Hack Scraper Input",
+  "title": "Meta Ads Library Scraper Input",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
-    "startUrls": {
-      "title": "Start URLs",
+    "accessToken": {
+      "title": "Facebook Access Token",
+      "type": "string",
+      "description": "Token di accesso per l'API di Facebook. Richiesto per accedere alla Meta Ads Library.",
+      "editor": "textfield",
+      "isSecret": true
+    },
+    "searchTerms": {
+      "title": "Termini di ricerca",
+      "type": "string",
+      "description": "Termini di ricerca per filtrare gli annunci (opzionale).",
+      "editor": "textfield"
+    },
+    "adReachedCountries": {
+      "title": "Paesi target",
       "type": "array",
-      "description": "List of URLs to start scraping from. You can provide a single URL as a string or multiple URLs as an array.",
-      "editor": "requestListSources",
-      "prefill": [
-        {
-          "url": "https://example.com"
-        }
-      ]
+      "description": "Lista di codici paese (ISO 2 lettere) per filtrare gli annunci. Es: ['IT', 'US', 'GB']",
+      "editor": "stringList",
+      "default": ["IT"]
+    },
+    "adActiveStatus": {
+      "title": "Stato degli annunci",
+      "type": "string",
+      "description": "Filtra per stato degli annunci: ALL, ACTIVE, INACTIVE",
+      "enum": ["ALL", "ACTIVE", "INACTIVE"],
+      "default": "ALL",
+      "editor": "select"
+    },
+    "adType": {
+      "title": "Tipo di annuncio",
+      "type": "string",
+      "description": "Tipo di annuncio da cercare: ALL, POLITICAL_AND_ISSUE_ADS, HOUSING_ADS, EMPLOYMENT_ADS, CREDIT_ADS",
+      "enum": ["ALL", "POLITICAL_AND_ISSUE_ADS", "HOUSING_ADS", "EMPLOYMENT_ADS", "CREDIT_ADS"],
+      "default": "ALL",
+      "editor": "select"
+    },
+    "limit": {
+      "title": "Limite risultati",
+      "type": "integer",
+      "description": "Numero massimo di annunci da recuperare per richiesta (max 1000).",
+      "minimum": 1,
+      "maximum": 1000,
+      "default": 100
     },
     "maxPages": {
-      "title": "Max pages",
+      "title": "Pagine massime",
       "type": "integer",
-      "description": "Maximum number of pages to scrape. Set to 0 for unlimited.",
-      "minimum": 0,
-      "default": 10,
-      "maximum": 1000
-    },
-    "maxDepth": {
-      "title": "Max crawling depth",
-      "type": "integer",
-      "description": "Maximum depth of links to follow. Set to 1 for single page scraping, higher values for crawling.",
+      "description": "Numero massimo di pagine di risultati da processare.",
       "minimum": 1,
-      "default": 1,
-      "maximum": 10
+      "maximum": 100,
+      "default": 10
     },
-    "allowedDomains": {
-      "title": "Allowed domains",
+    "fields": {
+      "title": "Campi da estrarre",
       "type": "array",
-      "description": "List of domains to restrict crawling to. Leave empty to allow all domains from start URLs.",
-      "editor": "stringList"
+      "description": "Lista dei campi da estrarre per ogni annuncio.",
+      "editor": "stringList",
+      "default": [
+        "id",
+        "ad_creation_time",
+        "ad_creative_bodies",
+        "ad_creative_link_captions",
+        "ad_creative_link_descriptions",
+        "ad_creative_link_titles",
+        "ad_delivery_start_time",
+        "ad_delivery_stop_time",
+        "ad_snapshot_url",
+        "currency",
+        "demographic_distribution",
+        "funding_entity",
+        "impressions",
+        "page_id",
+        "page_name",
+        "publisher_platforms",
+        "spend"
+      ]
     },
     "proxyConfiguration": {
-      "title": "Proxy configuration",
+      "title": "Configurazione proxy",
       "type": "object",
-      "description": "Proxy settings for the scraper.",
+      "description": "Impostazioni proxy per le richieste.",
       "editor": "proxy",
       "prefill": {
         "useApifyProxy": true
       }
-    },
-    "customHeaders": {
-      "title": "Custom headers",
-      "type": "object",
-      "description": "Custom HTTP headers to send with requests.",
-      "editor": "json",
-      "prefill": {}
-    },
-    "waitForSelector": {
-      "title": "Wait for selector",
-      "type": "string",
-      "description": "CSS selector to wait for before extracting data. Useful for dynamic content.",
-      "editor": "textfield"
-    },
-    "includeImages": {
-      "title": "Include images",
-      "type": "boolean",
-      "description": "Whether to extract image URLs from pages.",
-      "default": true
-    },
-    "includeLinks": {
-      "title": "Include links",
-      "type": "boolean",
-      "description": "Whether to extract links from pages.",
-      "default": true
-    },
-    "includeMetadata": {
-      "title": "Include metadata",
-      "type": "boolean",
-      "description": "Whether to extract page metadata (meta tags, structured data).",
-      "default": true
-    },
-    "includeHtml": {
-      "title": "Include HTML",
-      "type": "boolean",
-      "description": "Whether to include the full HTML content in results.",
-      "default": false
     }
   },
-  "required": ["startUrls"]
+  "required": ["accessToken"]
 }
