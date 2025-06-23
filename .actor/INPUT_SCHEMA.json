@@ -8,16 +8,6 @@
       "type": "array",
       "description": "List of URLs to start scraping from. You can provide a single URL as a string or multiple URLs as an array.",
       "editor": "requestListSources",
-      "items": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "pattern": "^https?://.*"
-          }
-        },
-        "required": ["url"]
-      },
       "prefill": [
         {
           "url": "https://example.com"
