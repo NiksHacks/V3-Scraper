@@ -191,33 +191,64 @@ class MetaAdsLibraryWebScraper:
             content = await self.page.content()
             soup = BeautifulSoup(content, 'html.parser')
             
-            # Find ad containers - these selectors may need adjustment based on Facebook's current structure
-            ad_containers = soup.find_all(['div'], attrs={
-                'data-testid': lambda x: x and 'ad-library-card' in x if x else False
-            })
+            # Updated selectors based on current Facebook Ads Library structure
+            # Try multiple approaches to find ad containers
+            ad_containers = []
             
-            # If the above doesn't work, try more generic selectors
-            if not ad_containers:
-                # Look for containers that might contain ads
-                potential_containers = soup.find_all('div', class_=lambda x: x and any(
-                    keyword in x.lower() for keyword in ['card', 'result', 'item', 'ad']
-                ) if x else False)
-                
-                # Filter containers that seem to contain ad data
-                ad_containers = []
-                for container in potential_containers:
-                    if self.looks_like_ad_container(container):
-                        ad_containers.append(container)
+            # Method 1: Look for divs with specific data attributes or classes
+            containers_1 = soup.find_all('div', attrs={
+                'data-testid': lambda x: x and ('ad-library-card' in x or 'ad_library_card' in x) if x else False
+            })
+            ad_containers.extend(containers_1)
+            
+            # Method 2: Look for article elements (common in Facebook's structure)
+            containers_2 = soup.find_all('article')
+            ad_containers.extend(containers_2)
+            
+            # Method 3: Look for divs with role="article"
+            containers_3 = soup.find_all('div', {'role': 'article'})
+            ad_containers.extend(containers_3)
+            
+            # Method 4: Look for divs containing ad-related text patterns
+            containers_4 = soup.find_all('div', string=lambda text: text and any(keyword in text.lower() for keyword in ['sponsored', 'ad', 'promoted']) if text else False)
+            ad_containers.extend([container.parent for container in containers_4 if container.parent])
+            
+            # Method 5: Look for divs with specific class patterns (Facebook often uses dynamic classes)
+            containers_5 = soup.find_all('div', class_=lambda x: x and any(pattern in ' '.join(x) for pattern in ['card', 'item', 'result']) if x else False)
+            ad_containers.extend(containers_5)
+            
+            # Remove duplicates
+            unique_containers = []
+            seen = set()
+            for container in ad_containers:
+                container_str = str(container)[:100]  # Use first 100 chars as identifier
+                if container_str not in seen:
+                    seen.add(container_str)
+                    unique_containers.append(container)
+            
+            ad_containers = unique_containers
             
             Actor.log.info(f"Found {len(ad_containers)} potential ad containers")
             
-            for i, container in enumerate(ad_containers):
+            # If still no containers, try a broader search
+            if not ad_containers:
+                # Look for any div that might contain ad content
+                all_divs = soup.find_all('div')
+                for div in all_divs:
+                    if self.looks_like_ad_container(div):
+                        ad_containers.append(div)
+            
+            Actor.log.info(f"After filtering: {len(ad_containers)} potential ad containers")
+            
+            # Extract data from each container
+            for container in ad_containers:
                 try:
-                    ad_data = self.extract_ad_data_from_container(container)
+                    ad_data = await self.extract_ad_data_from_container(container)
                     if ad_data:
                         ads.append(ad_data)
                 except Exception as e:
-                    Actor.log.debug(f"Error extracting ad {i}: {str(e)}")
+                    Actor.log.debug(f"Error extracting ad data: {str(e)}")
+                    continue
                     
         except Exception as e:
             Actor.log.error(f"Error extracting ads from page: {str(e)}")
@@ -238,12 +269,22 @@ class MetaAdsLibraryWebScraper:
             'started running',
             'see ad details',
             'impressions',
-            'spend'
+            'spend',
+            'learn more',
+            'see more',
+            'active',
+            'inactive',
+            'advertiser',
+            'campaign'
         ]
         
-        return any(indicator in text for indicator in ad_indicators)
+        # Check for minimum content length and ad indicators
+        has_indicators = any(indicator in text for indicator in ad_indicators)
+        has_content = len(text.strip()) > 20
+        
+        return has_indicators and has_content
     
-    def extract_ad_data_from_container(self, container) -> Optional[Dict[str, Any]]:
+    async def extract_ad_data_from_container(self, container) -> Optional[Dict[str, Any]]:
         """
         Extract ad data from a single container
         """
@@ -257,7 +298,8 @@ class MetaAdsLibraryWebScraper:
                 'impressions': self.extract_impressions(container),
                 'spend': self.extract_spend(container),
                 'scraped_at': datetime.now().isoformat(),
-                'source': 'web_scraping'
+                'source': 'web_scraping',
+                'raw_html': str(container)[:500]  # Store first 500 chars for debugging
             }
             
             # Only return if we have some meaningful data
@@ -289,16 +331,28 @@ class MetaAdsLibraryWebScraper:
         # Look for page name in various possible locations
         selectors = [
             '[data-testid*="page-name"]',
+            '[aria-label*="Page"]',
             '.page-name',
-            'h3',
-            'h4',
-            'strong'
+            'h1', 'h2', 'h3', 'h4',
+            'strong',
+            'a[href*="/"]'
         ]
         
         for selector in selectors:
-            element = container.select_one(selector)
-            if element and element.get_text().strip():
-                return element.get_text().strip()
+            elements = container.select(selector)
+            for element in elements:
+                text = element.get_text().strip()
+                # Filter out common non-page-name text
+                if text and len(text) > 2 and len(text) < 100:
+                    if not any(skip in text.lower() for skip in ['see more', 'learn more', 'sponsored', 'ad']):
+                        return text
+        
+        # Fallback: look for the first meaningful text
+        all_text = container.get_text().strip()
+        lines = [line.strip() for line in all_text.split('\n') if line.strip()]
+        for line in lines[:3]:  # Check first 3 lines
+            if len(line) > 2 and len(line) < 100:
+                return line
         
         return ""
     
@@ -306,17 +360,26 @@ class MetaAdsLibraryWebScraper:
         """
         Extract the main ad text
         """
-        # Look for the main ad content
-        text_elements = container.find_all(['p', 'div', 'span'])
+        # Look for the main ad content in various elements
+        text_elements = container.find_all(['p', 'div', 'span', 'article'])
         
-        # Find the longest text that looks like ad content
-        longest_text = ""
+        # Collect all meaningful text pieces
+        text_pieces = []
         for element in text_elements:
             text = element.get_text().strip()
-            if len(text) > len(longest_text) and len(text) > 20:
-                longest_text = text
+            # Filter out navigation and metadata text
+            if (len(text) > 10 and len(text) < 1000 and 
+                not any(skip in text.lower() for skip in [
+                    'see more', 'learn more', 'sponsored', 'ad library',
+                    'started running', 'impressions', 'spend', 'active', 'inactive'
+                ])):
+                text_pieces.append(text)
         
-        return longest_text
+        # Return the longest meaningful text
+        if text_pieces:
+            return max(text_pieces, key=len)
+        
+        return ""
     
     def extract_snapshot_url(self, container) -> str:
         """
