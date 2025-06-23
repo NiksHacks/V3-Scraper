@@ -1,89 +1,62 @@
-# Meta Ads Library Scraper
+# Meta Ads Library Web Scraper
 
-Questo actor permette di estrarre annunci pubblicitari dalla Meta Ads Library utilizzando l'API ufficiale di Facebook.
+Un potente scraper per la Meta Ads Library che utilizza web scraping per raccogliere dati pubblicitari pubblici senza necessità di token di accesso o verifiche aziendali.
 
 ## Caratteristiche
 
-- Estrazione di annunci pubblicitari da Facebook/Instagram
-- Ricerca per termini specifici
-- Filtri per paese, stato dell'annuncio e tipo
-- Estrazione di dati dettagliati inclusi spesa, impressioni e contenuti creativi
-- Gestione automatica della paginazione
-- Rispetto dei rate limits dell'API
+- **Nessun Token Richiesto**: Funziona senza token di accesso Facebook o verifiche aziendali
+- **Web Scraping Avanzato**: Utilizza Playwright per navigazione dinamica e BeautifulSoup per parsing
+- **Ricerca Flessibile**: Supporta ricerca per termini, paesi, stato degli annunci e tipo
+- **Scroll Automatico**: Carica automaticamente più contenuti scrollando la pagina
+- **Gestione Cookie**: Gestisce automaticamente i popup di consenso cookie
+- **Dati Strutturati**: Output in formato JSON strutturato e pulito
 
 ## Input
 
-### Parametri Richiesti
-
-- **accessToken** (string): Token di accesso per l'API di Facebook. Richiesto per autenticare le richieste.
-
-### Parametri Opzionali
+### Tutti Opzionali
 
 - **searchTerms** (string): Termini di ricerca per filtrare gli annunci
 - **adReachedCountries** (array): Lista dei codici paese (default: ['IT'])
 - **adActiveStatus** (string): Stato degli annunci - 'ALL', 'ACTIVE', 'INACTIVE' (default: 'ALL')
 - **adType** (string): Tipo di annuncio - 'ALL', 'POLITICAL_AND_ISSUE_ADS', 'HOUSING_ADS', 'EMPLOYMENT_ADS', 'CREDIT_ADS' (default: 'ALL')
-- **limit** (number): Numero di annunci per pagina (default: 100, max: 1000)
-- **maxPages** (number): Numero massimo di pagine da processare (default: 10)
-- **fields** (array): Campi specifici da estrarre (opzionale, usa i default se non specificato)
+- **limit** (number): Numero massimo di annunci da raccogliere (default: 50, max: 500)
+- **maxPages** (number): Numero massimo di pagine da scorrere (default: 5, max: 20)
 - **proxyConfiguration** (object): Configurazione proxy per le richieste
 
 ## Output
 
 Ogni annuncio estratto contiene:
 
-- **ad_id**: ID univoco dell'annuncio
+- **ad_id**: ID univoco generato per l'annuncio
 - **page_name**: Nome della pagina che ha pubblicato l'annuncio
-- **page_id**: ID della pagina
-- **ad_creation_time**: Data di creazione dell'annuncio
-- **ad_delivery_start_time**: Data di inizio pubblicazione
-- **ad_delivery_stop_time**: Data di fine pubblicazione
-- **ad_snapshot_url**: URL dello screenshot dell'annuncio
-- **currency**: Valuta utilizzata per la spesa
-- **funding_entity**: Entità che finanzia l'annuncio
-- **impressions**: Dati sulle impressioni
-- **spend**: Dati sulla spesa pubblicitaria
-- **demographic_distribution**: Distribuzione demografica
-- **publisher_platforms**: Piattaforme di pubblicazione
 - **ad_creative_body**: Testo principale dell'annuncio
-- **ad_creative_link_caption**: Didascalia del link
-- **ad_creative_link_description**: Descrizione del link
-- **ad_creative_link_title**: Titolo del link
-- **scraped_at**: Timestamp dell'estrazione
+- **ad_snapshot_url**: URL per visualizzare l'annuncio nella libreria
+- **ad_delivery_start_time**: Data di inizio pubblicazione (se disponibile)
+- **impressions**: Dati sulle impressioni (se disponibili)
+- **spend**: Dati sulla spesa (se disponibili)
+- **scraped_at**: Timestamp di quando è stato raccolto il dato
+- **source**: Indica che i dati provengono da web scraping
 
-## Come Ottenere un Access Token
+## Vantaggi del Web Scraping
 
-### Requisiti Importanti
+### Nessuna Verifica Richiesta
 
-⚠️ **ATTENZIONE**: Per accedere alla Meta Ads Library API, la tua app Facebook deve avere un **ruolo specifico** assegnato dal proprietario dell'app. Senza questo ruolo, riceverai l'errore "Application does not have permission for this action" (codice 2332004).
+- **Nessun Token**: Non serve un token di accesso Facebook
+- **Nessuna App**: Non è necessario creare o verificare un'app Facebook
+- **Nessuna Azienda**: Non serve avere un'azienda registrata per la verifica Meta
+- **Accesso Immediato**: Funziona subito senza approvazioni
 
-### Passaggi per Configurare l'Accesso
+### Limitazioni
 
-1. **Crea o Configura l'App Facebook**:
-   - Vai su [Facebook Developers](https://developers.facebook.com/)
-   - Crea una nuova app o usa una esistente
-   - Aggiungi il prodotto "Marketing API"
-
-2. **Richiedi l'Accesso alla Ads Library**:
-   - L'accesso alla Meta Ads Library richiede un processo di approvazione
-   - La tua app deve essere verificata da Meta
-   - Devi avere un ruolo appropriato nell'app (Developer, Admin, etc.)
-
-3. **Genera il Token di Accesso**:
-   - Usa il Graph API Explorer o genera programmaticamente
-   - Assicurati che il token abbia i permessi:
-     - `ads_read`
-     - `pages_read_engagement`
-
-4. **Verifica i Permessi**:
-   - Testa il token con una chiamata di prova all'API
-   - Verifica che non ricevi errori di autorizzazione
+- **Dati Pubblici**: Accede solo ai dati pubblicamente disponibili nella libreria
+- **Velocità**: Più lento rispetto all'API ufficiale
+- **Stabilità**: Dipende dalla struttura del sito web di Facebook
+- **Rate Limiting**: Limitato dalla velocità di caricamento delle pagine
 
 ## Esempio di Input
 
 ```json
 {
-  "accessToken": "YOUR_FACEBOOK_ACCESS_TOKEN",
   "searchTerms": "pizza",
   "adReachedCountries": ["IT", "US"],
   "adActiveStatus": "ACTIVE",
@@ -95,48 +68,53 @@ Ogni annuncio estratto contiene:
 
 ## Note Importanti
 
-- L'access token deve avere i permessi appropriati per accedere alla Meta Ads Library
-- L'API ha rate limits che vengono gestiti automaticamente dall'actor
-- I dati disponibili dipendono dalle politiche di trasparenza di Meta
-- Alcuni campi potrebbero non essere disponibili per tutti gli annunci
+- **Dati Pubblici**: Accede solo ai dati pubblicamente visibili nella Meta Ads Library
+- **Velocità**: Il web scraping è più lento rispetto all'API ufficiale
+- **Struttura Sito**: Dipende dalla struttura HTML del sito Facebook (può cambiare)
+- **Rate Limiting**: Limitato dalla velocità di caricamento delle pagine
+- **Geo-restrizioni**: Alcuni dati potrebbero essere limitati per paese
+- **Contenuto Dinamico**: Alcuni elementi potrebbero non essere sempre visibili
 
 ## Risoluzione Problemi
 
-### Errore: "Application does not have permission for this action" (Codice 2332004)
+### Nessun Annuncio Trovato
 
-Questo errore indica che:
-- La tua app Facebook non ha i permessi necessari per accedere alla Ads Library
-- Non hai un ruolo appropriato nell'app Facebook
-- L'app non è stata approvata da Meta per l'accesso alla Ads Library
+**Causa**: I criteri di ricerca sono troppo specifici o la pagina non si è caricata correttamente.
 
-**Soluzioni**:
-1. Contatta il proprietario dell'app per assegnarti un ruolo (Developer, Admin, etc.)
-2. Richiedi l'approvazione dell'app per l'accesso alla Meta Ads Library
-3. Verifica che l'app abbia tutti i permessi necessari
-4. Usa un token di accesso generato da un account con i permessi appropriati
+**Soluzione**:
+1. Prova termini di ricerca più generici
+2. Espandi i paesi target
+3. Cambia lo stato degli annunci (es. da ACTIVE a ALL)
+4. Aumenta il numero di pagine massime
 
-### Errore: "Invalid Access Token"
+### Errori di Caricamento Pagina
 
-- Verifica che il token non sia scaduto
-- Assicurati che il token abbia i permessi `ads_read`
-- Rigenera il token se necessario
+**Causa**: Problemi di connessione o blocchi temporanei.
 
-### Nessun Risultato Trovato
+**Soluzione**:
+1. Riprova dopo qualche minuto
+2. Usa una configurazione proxy
+3. Riduci la velocità di scraping
 
-- Verifica i parametri di ricerca (termini, paesi, stato)
-- Prova con criteri di ricerca più ampi
-- Controlla che ci siano annunci attivi per i parametri specificati
+### Dati Incompleti
+
+**Causa**: La struttura della pagina è cambiata o alcuni elementi non sono visibili.
+
+**Soluzione**:
+1. Verifica che la pagina si carichi correttamente nel browser
+2. Prova con criteri di ricerca diversi
+3. Controlla i log per errori specifici
 
 ## Limitazioni
 
-- L'API di Meta ha limitazioni sui dati storici disponibili
+- I dati storici disponibili dipendono dalle politiche di Meta
 - Alcuni annunci potrebbero non essere accessibili a causa delle impostazioni di privacy
-- I rate limits dell'API possono influenzare la velocità di estrazione
-- **Accesso limitato**: Solo app approvate possono accedere alla Meta Ads Library
+- La velocità di scraping può influenzare la quantità di dati raccolti
+- **Accesso limitato**: Solo ai dati pubblicamente disponibili
 
 ## Supporto
 
 Per problemi o domande:
-- Consulta la [documentazione ufficiale dell'API Meta Ads Library](https://developers.facebook.com/docs/marketing-api/reference/ads-archive/)
-- Leggi la [guida sui ruoli delle app Facebook](https://developers.facebook.com/docs/development/build-and-test/app-roles)
-- Visita il [centro assistenza per sviluppatori Meta](https://developers.facebook.com/support/)
+- [Meta Ads Library](https://www.facebook.com/ads/library/)
+- [Documentazione Playwright](https://playwright.dev/)
+- [Documentazione BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)

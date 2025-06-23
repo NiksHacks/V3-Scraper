@@ -1,8 +1,8 @@
 {
     "actorSpecification": 1,
     "name": "meta-ads-scraper",
-    "title": "Meta Ads Library Scraper",
-    "description": "Scraper specializzato per estrarre annunci pubblicitari dalla Meta Ads Library di Facebook.",
+    "title": "Meta Ads Library Web Scraper",
+    "description": "Scraper per la Meta Ads Library che utilizza web scraping per estrarre dati pubblicitari pubblici senza necessità di token di accesso o verifiche aziendali. Supporta ricerca avanzata, filtri per paese e tipo, scroll automatico e gestione cookie.",
     "version": "0.0.1",
     "storages": {
         "dataset": {

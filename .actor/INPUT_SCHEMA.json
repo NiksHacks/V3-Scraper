@@ -1,15 +1,8 @@
 {
-  "title": "Meta Ads Library Scraper Input",
+  "title": "Meta Ads Library Web Scraper Input",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
-    "accessToken": {
-      "title": "Facebook Access Token",
-      "type": "string",
-      "description": "Token di accesso per l'API di Facebook. Richiesto per accedere alla Meta Ads Library.",
-      "editor": "textfield",
-      "isSecret": true
-    },
     "searchTerms": {
       "title": "Termini di ricerca",
       "type": "string",
@@ -40,45 +33,20 @@
       "editor": "select"
     },
     "limit": {
-      "title": "Limite risultati",
+      "title": "Results Limit",
       "type": "integer",
-      "description": "Numero massimo di annunci da recuperare per richiesta (max 1000).",
+      "description": "Maximum number of ads to retrieve (default: 50)",
+      "default": 50,
       "minimum": 1,
-      "maximum": 1000,
-      "default": 100
+      "maximum": 500
     },
     "maxPages": {
-      "title": "Pagine massime",
+      "title": "Maximum Pages",
       "type": "integer",
-      "description": "Numero massimo di pagine di risultati da processare.",
+      "description": "Maximum number of pages to scroll through (default: 5)",
+      "default": 5,
       "minimum": 1,
-      "maximum": 100,
-      "default": 10
-    },
-    "fields": {
-      "title": "Campi da estrarre",
-      "type": "array",
-      "description": "Lista dei campi da estrarre per ogni annuncio.",
-      "editor": "stringList",
-      "default": [
-        "id",
-        "ad_creation_time",
-        "ad_creative_bodies",
-        "ad_creative_link_captions",
-        "ad_creative_link_descriptions",
-        "ad_creative_link_titles",
-        "ad_delivery_start_time",
-        "ad_delivery_stop_time",
-        "ad_snapshot_url",
-        "currency",
-        "demographic_distribution",
-        "funding_entity",
-        "impressions",
-        "page_id",
-        "page_name",
-        "publisher_platforms",
-        "spend"
-      ]
+      "maximum": 20
     },
     "proxyConfiguration": {
       "title": "Configurazione proxy",
@@ -90,5 +58,5 @@
       }
     }
   },
-  "required": ["accessToken"]
+  "required": []
 }
