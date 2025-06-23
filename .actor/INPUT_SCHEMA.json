@@ -15,7 +15,8 @@
             "type": "string",
             "pattern": "^https?://.*"
           }
-        }
+        },
+        "required": ["url"]
       },
       "prefill": [
         {
