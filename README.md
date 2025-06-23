@@ -53,12 +53,31 @@ Ogni annuncio estratto contiene:
 
 ## Come Ottenere un Access Token
 
-1. Vai su [Facebook Developers](https://developers.facebook.com/)
-2. Crea una nuova app o usa una esistente
-3. Aggiungi il prodotto "Marketing API"
-4. Genera un token di accesso con i permessi necessari:
-   - `ads_read`
-   - `pages_read_engagement`
+### Requisiti Importanti
+
+⚠️ **ATTENZIONE**: Per accedere alla Meta Ads Library API, la tua app Facebook deve avere un **ruolo specifico** assegnato dal proprietario dell'app. Senza questo ruolo, riceverai l'errore "Application does not have permission for this action" (codice 2332004).
+
+### Passaggi per Configurare l'Accesso
+
+1. **Crea o Configura l'App Facebook**:
+   - Vai su [Facebook Developers](https://developers.facebook.com/)
+   - Crea una nuova app o usa una esistente
+   - Aggiungi il prodotto "Marketing API"
+
+2. **Richiedi l'Accesso alla Ads Library**:
+   - L'accesso alla Meta Ads Library richiede un processo di approvazione
+   - La tua app deve essere verificata da Meta
+   - Devi avere un ruolo appropriato nell'app (Developer, Admin, etc.)
+
+3. **Genera il Token di Accesso**:
+   - Usa il Graph API Explorer o genera programmaticamente
+   - Assicurati che il token abbia i permessi:
+     - `ads_read`
+     - `pages_read_engagement`
+
+4. **Verifica i Permessi**:
+   - Testa il token con una chiamata di prova all'API
+   - Verifica che non ricevi errori di autorizzazione
 
 ## Esempio di Input
 
@@ -81,12 +100,43 @@ Ogni annuncio estratto contiene:
 - I dati disponibili dipendono dalle politiche di trasparenza di Meta
 - Alcuni campi potrebbero non essere disponibili per tutti gli annunci
 
+## Risoluzione Problemi
+
+### Errore: "Application does not have permission for this action" (Codice 2332004)
+
+Questo errore indica che:
+- La tua app Facebook non ha i permessi necessari per accedere alla Ads Library
+- Non hai un ruolo appropriato nell'app Facebook
+- L'app non è stata approvata da Meta per l'accesso alla Ads Library
+
+**Soluzioni**:
+1. Contatta il proprietario dell'app per assegnarti un ruolo (Developer, Admin, etc.)
+2. Richiedi l'approvazione dell'app per l'accesso alla Meta Ads Library
+3. Verifica che l'app abbia tutti i permessi necessari
+4. Usa un token di accesso generato da un account con i permessi appropriati
+
+### Errore: "Invalid Access Token"
+
+- Verifica che il token non sia scaduto
+- Assicurati che il token abbia i permessi `ads_read`
+- Rigenera il token se necessario
+
+### Nessun Risultato Trovato
+
+- Verifica i parametri di ricerca (termini, paesi, stato)
+- Prova con criteri di ricerca più ampi
+- Controlla che ci siano annunci attivi per i parametri specificati
+
 ## Limitazioni
 
 - L'API di Meta ha limitazioni sui dati storici disponibili
 - Alcuni annunci potrebbero non essere accessibili a causa delle impostazioni di privacy
 - I rate limits dell'API possono influenzare la velocità di estrazione
+- **Accesso limitato**: Solo app approvate possono accedere alla Meta Ads Library
 
 ## Supporto
 
-Per problemi o domande, consulta la [documentazione ufficiale dell'API Meta Ads Library](https://developers.facebook.com/docs/marketing-api/reference/ads-archive/).
+Per problemi o domande:
+- Consulta la [documentazione ufficiale dell'API Meta Ads Library](https://developers.facebook.com/docs/marketing-api/reference/ads-archive/)
+- Leggi la [guida sui ruoli delle app Facebook](https://developers.facebook.com/docs/development/build-and-test/app-roles)
+- Visita il [centro assistenza per sviluppatori Meta](https://developers.facebook.com/support/)
