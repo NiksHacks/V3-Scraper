@@ -6,7 +6,6 @@ from datetime import datetime
 from apify import Actor
 import httpx
 from facebook_business.api import FacebookAdsApi
-from facebook_business.adobjects.adslibrary import AdsLibrary
 from facebook_business.exceptions import FacebookRequestError
 
 class MetaAdsLibraryScraper:
