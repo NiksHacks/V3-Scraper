@@ -1,0 +1,12 @@
+apify
+httpx
+beautifulsoup4
+lxml
+requests
+selenium
+playwright
+pyquery
+parsel
+w3lib
+urllib3
+certifi

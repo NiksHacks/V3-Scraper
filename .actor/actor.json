@@ -1,0 +1,33 @@
+{
+    "actorSpecification": 1,
+    "name": "nhk-hack FACEBOOK SCRAPER ADS",
+    "title": "NHK Hack",
+    "description": "A powerful and generic web scraper.",
+    "version": "0.0.1",
+    "storages": {
+        "dataset": {
+            "actorSpecification": 1,
+            "title": "NHK Hack Scraper Results",
+            "views": {
+                "default": {
+                    "title": "Default View",
+                    "transformation": {
+                        "fields": [
+                            "url",
+                            "title",
+                            "text",
+                            "html",
+                            "links",
+                            "images",
+                            "metadata"
+                        ]
+                    },
+                    "display": {
+                        "component": "table"
+                    }
+                }
+            }
+        }
+    },
+    "dockerfile": "./Dockerfile"
+}
